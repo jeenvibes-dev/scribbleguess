@@ -37,7 +37,7 @@ export default function Game() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<DrawingCanvasRef>(null);
 
-  const params = new URLSearchParams(location.split("?")[1] || "");
+  const params = new URLSearchParams(window.location.search);
   const roomCodeFromUrl = params.get("room");
   const playerIdFromUrl = params.get("playerId");
 
@@ -81,11 +81,12 @@ export default function Game() {
     }
   }, [toast]);
 
-  const { sendMessage, isConnected, setMessageHandler } = useWebSocketContext();
+  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
 
   useEffect(() => {
-    setMessageHandler(handleMessage);
-  }, [handleMessage, setMessageHandler]);
+    const unsubscribe = subscribe(handleMessage);
+    return unsubscribe;
+  }, [handleMessage, subscribe]);
 
   const isDrawer = gameState?.drawerIds.includes(playerId || "") || false;
   const currentPlayer = room?.players.find(p => p.id === playerId);

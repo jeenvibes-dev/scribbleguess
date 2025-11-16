@@ -21,10 +21,14 @@ export default function Home() {
     if (message.type === "room_created") {
       setPlayerId(message.playerId);
       setRoom(message.room);
+      localStorage.setItem(`room_${message.room.code}`, JSON.stringify(message.room));
+      localStorage.setItem(`player_${message.room.code}`, message.playerId);
       setLocation(`/lobby?room=${message.room.code}&playerId=${message.playerId}`);
     } else if (message.type === "room_joined") {
       setPlayerId(message.playerId);
       setRoom(message.room);
+      localStorage.setItem(`room_${message.room.code}`, JSON.stringify(message.room));
+      localStorage.setItem(`player_${message.room.code}`, message.playerId);
       setLocation(`/lobby?room=${message.room.code}&playerId=${message.playerId}`);
     } else if (message.type === "error") {
       toast({
@@ -35,11 +39,12 @@ export default function Home() {
     }
   }, [setLocation, toast]);
 
-  const { sendMessage, isConnected, setMessageHandler } = useWebSocketContext();
+  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
 
   useEffect(() => {
-    setMessageHandler(handleMessage);
-  }, [handleMessage, setMessageHandler]);
+    const unsubscribe = subscribe(handleMessage);
+    return unsubscribe;
+  }, [handleMessage, subscribe]);
 
   const handleCreateRoom = () => {
     if (playerName.trim() && isConnected) {

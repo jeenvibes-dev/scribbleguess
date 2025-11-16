@@ -6,15 +6,14 @@ export function useWebSocket(onMessage?: (message: ServerMessage) => void) {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-  const onMessageHandlerRef = useRef(onMessage);
+  const listenersRef = useRef<Set<(message: ServerMessage) => void>>(new Set());
 
-  const setMessageHandler = useCallback((handler: ((message: ServerMessage) => void) | undefined) => {
-    onMessageHandlerRef.current = handler;
+  const subscribe = useCallback((handler: (message: ServerMessage) => void) => {
+    listenersRef.current.add(handler);
+    return () => {
+      listenersRef.current.delete(handler);
+    };
   }, []);
-
-  useEffect(() => {
-    onMessageHandlerRef.current = onMessage;
-  }, [onMessage]);
 
   const connect = useCallback(() => {
     try {
@@ -33,7 +32,7 @@ export function useWebSocket(onMessage?: (message: ServerMessage) => void) {
         try {
           const message = JSON.parse(event.data) as ServerMessage;
           console.log("Received message:", message);
-          onMessageHandlerRef.current?.(message);
+          listenersRef.current.forEach(listener => listener(message));
         } catch (err) {
           console.error("Error parsing message:", err);
         }
@@ -86,6 +85,6 @@ export function useWebSocket(onMessage?: (message: ServerMessage) => void) {
     sendMessage,
     isConnected,
     error,
-    setMessageHandler,
+    subscribe,
   };
 }

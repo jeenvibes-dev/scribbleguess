@@ -56,7 +56,7 @@ export default function Lobby() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarId>("avatar-1");
 
-  const params = new URLSearchParams(location.split("?")[1] || "");
+  const params = new URLSearchParams(window.location.search);
   const roomCodeFromUrl = params.get("room");
   const playerIdFromUrl = params.get("playerId");
 
@@ -64,7 +64,24 @@ export default function Lobby() {
     if (playerIdFromUrl) {
       setPlayerId(playerIdFromUrl);
     }
-  }, [playerIdFromUrl]);
+    if (roomCodeFromUrl) {
+      const savedRoom = localStorage.getItem(`room_${roomCodeFromUrl}`);
+      const savedPlayerId = localStorage.getItem(`player_${roomCodeFromUrl}`);
+      if (savedRoom && savedPlayerId) {
+        try {
+          const parsedRoom = JSON.parse(savedRoom);
+          setRoom(parsedRoom);
+          setPlayerId(savedPlayerId);
+          const player = parsedRoom.players?.find((p: any) => p.id === savedPlayerId);
+          if (player) {
+            setSelectedAvatar(player.avatar);
+          }
+        } catch (e) {
+          console.error("Failed to parse saved room:", e);
+        }
+      }
+    }
+  }, [playerIdFromUrl, roomCodeFromUrl]);
 
   const handleMessage = useCallback((message: ServerMessage) => {
     if (message.type === "room_created" || message.type === "room_joined") {
@@ -94,11 +111,12 @@ export default function Lobby() {
     }
   }, [roomCodeFromUrl, playerId, playerIdFromUrl, setLocation, toast]);
 
-  const { sendMessage, isConnected, setMessageHandler } = useWebSocketContext();
+  const { sendMessage, isConnected, subscribe } = useWebSocketContext();
 
   useEffect(() => {
-    setMessageHandler(handleMessage);
-  }, [handleMessage, setMessageHandler]);
+    const unsubscribe = subscribe(handleMessage);
+    return unsubscribe;
+  }, [handleMessage, subscribe]);
 
   useEffect(() => {
     if (isConnected && roomCodeFromUrl && playerIdFromUrl && !room) {

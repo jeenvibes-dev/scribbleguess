@@ -6,7 +6,7 @@ interface WebSocketContextType {
   sendMessage: (message: WsMessage) => void;
   isConnected: boolean;
   error: string | null;
-  setMessageHandler: (handler: ((message: ServerMessage) => void) | undefined) => void;
+  subscribe: (handler: (message: ServerMessage) => void) => () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
