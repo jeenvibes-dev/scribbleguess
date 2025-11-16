@@ -88,7 +88,7 @@ export default function Home() {
           <div className="flex items-center justify-center gap-3">
             <Paintbrush className="h-12 w-12 text-primary" />
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-              Doodle Guess
+              ScribbleGuess
             </h1>
           </div>
           <p className="text-xl text-muted-foreground font-medium">

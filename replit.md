@@ -1,8 +1,8 @@
-# Doodle Guess - Multiplayer Drawing Game
+# ScribbleGuess - Multiplayer Drawing Game
 
 ## Overview
 
-Doodle Guess is a real-time multiplayer drawing and guessing game inspired by Skribbl.io and Gartic Phone. Players join rooms where one or more players draw a secret word while others attempt to guess it. The game features multiple game modes including Classic (traditional 60s rounds), Double Draw (two simultaneous drawers), Blitz (fast 15s rounds), Randomized (random brush modifiers), and Mega Mode (1 drawer with up to 50 guessers).
+ScribbleGuess is a real-time multiplayer drawing and guessing game inspired by Skribbl.io and Gartic Phone. Players join rooms where one or more players draw a secret word while others attempt to guess it. The game features multiple game modes including Classic (traditional 60s rounds), Double Draw (two simultaneous drawers), Blitz (fast 15s rounds), Randomized (random brush modifiers), and Mega Mode (1 drawer with up to 50 guessers).
 
 The application uses a React frontend with TypeScript, Express backend with WebSocket support for real-time communication, and is designed to be deployed on Replit.
 
