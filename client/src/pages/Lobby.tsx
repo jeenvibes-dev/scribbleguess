@@ -151,6 +151,16 @@ export default function Lobby() {
     }
   };
 
+  const handleModeChange = (gameMode: GameMode) => {
+    if (room?.code && isHost && !room.isStarted) {
+      sendMessage({
+        type: "update_mode",
+        roomCode: room.code,
+        gameMode,
+      });
+    }
+  };
+
   const handleStartGame = () => {
     if (room?.code && isHost) {
       sendMessage({
@@ -240,13 +250,20 @@ export default function Lobby() {
                   {Object.entries(GAME_MODE_INFO).map(([mode, info]) => {
                     const Icon = info.icon;
                     const isSelected = room.gameMode === mode;
+                    const canChange = isHost && !room.isStarted;
                     return (
-                      <div
+                      <button
                         key={mode}
-                        className={`p-4 rounded-lg border-2 ${
+                        onClick={() => canChange && handleModeChange(mode as GameMode)}
+                        disabled={!canChange}
+                        className={`p-4 rounded-lg border-2 text-left transition-all ${
                           isSelected
                             ? "border-primary bg-primary/5"
                             : "border-border bg-card"
+                        } ${
+                          canChange
+                            ? "hover-elevate active-elevate-2 cursor-pointer"
+                            : "cursor-default opacity-75"
                         }`}
                         data-testid={`mode-${mode}`}
                       >
@@ -263,7 +280,7 @@ export default function Lobby() {
                             </p>
                           </div>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>

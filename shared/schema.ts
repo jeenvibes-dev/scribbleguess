@@ -132,6 +132,11 @@ export const wsMessageSchema = z.discriminatedUnion("type", [
     roomCode: z.string(),
     avatar: z.enum(AVATARS),
   }),
+  z.object({
+    type: z.literal("update_mode"),
+    roomCode: z.string(),
+    gameMode: z.enum([GameMode.CLASSIC, GameMode.DOUBLE_DRAW, GameMode.BLITZ, GameMode.RANDOMIZED, GameMode.MEGA]),
+  }),
 ]);
 
 export type WsMessage = z.infer<typeof wsMessageSchema>;

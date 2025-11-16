@@ -80,6 +80,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       case "update_avatar":
         handleUpdateAvatar(ws, message, wss);
         break;
+      case "update_mode":
+        handleUpdateMode(ws, message, wss);
+        break;
     }
   }
 
@@ -376,6 +379,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       storage.updateRoom(room.code, { players: room.players });
       broadcastToRoom(room.code, { type: "room_updated", room: storage.getRoom(room.code)! }, wss);
     }
+  }
+
+  function handleUpdateMode(ws: ExtendedWebSocket, message: WsMessage & { type: "update_mode" }, wss: WebSocketServer) {
+    const room = storage.getRoom(message.roomCode);
+    if (!room) return;
+
+    if (room.hostId !== ws.playerId) {
+      sendToClient(ws, { type: "error", message: "Only the host can change the game mode" });
+      return;
+    }
+
+    if (room.isStarted) {
+      sendToClient(ws, { type: "error", message: "Cannot change mode after game has started" });
+      return;
+    }
+
+    const maxPlayers = message.gameMode === GameMode.MEGA ? 50 : 12;
+    storage.updateRoom(room.code, { gameMode: message.gameMode, maxPlayers });
+    const updatedRoom = storage.getRoom(room.code)!;
+    broadcastToRoom(room.code, { type: "room_updated", room: updatedRoom }, wss);
   }
 
   function handlePlayerDisconnect(ws: ExtendedWebSocket, wss: WebSocketServer) {
