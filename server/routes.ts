@@ -62,6 +62,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       case "join_room":
         handleJoinRoom(ws, message, wss);
         break;
+      case "join_random_room":
+        handleJoinRandomRoom(ws, message, wss);
+        break;
       case "rejoin_room":
         handleRejoinRoom(ws, message, wss);
         break;
@@ -155,6 +158,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     storage.addMessage(room.code, systemMessage);
     broadcastToRoom(room.code, { type: "chat_message", message: systemMessage }, wss);
+  }
+
+  function handleJoinRandomRoom(ws: ExtendedWebSocket, message: WsMessage & { type: "join_random_room" }, wss: WebSocketServer) {
+    const allRooms = storage.getAllRooms();
+    const availableRooms = allRooms.filter(room => 
+      !room.isStarted && room.players.length < room.maxPlayers
+    );
+
+    let targetRoom;
+    
+    if (availableRooms.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableRooms.length);
+      targetRoom = availableRooms[randomIndex];
+    } else {
+      const gameModes: GameMode[] = [
+        GameMode.CLASSIC,
+        GameMode.DOUBLE_DRAW,
+        GameMode.BLITZ,
+        GameMode.RANDOMIZED,
+        GameMode.MEGA,
+      ];
+      const randomMode = gameModes[Math.floor(Math.random() * gameModes.length)];
+      
+      const playerId = randomUUID();
+      const player: Player = {
+        id: playerId,
+        name: message.playerName,
+        avatar: message.avatar,
+        score: 0,
+        hasGuessed: false,
+      };
+
+      targetRoom = storage.createRoom(playerId, randomMode);
+      storage.addPlayerToRoom(targetRoom.code, player);
+
+      ws.playerId = playerId;
+      ws.roomCode = targetRoom.code;
+
+      const updatedRoom = storage.getRoom(targetRoom.code)!;
+      sendToClient(ws, { type: "room_created", room: updatedRoom, playerId });
+      return;
+    }
+
+    const playerId = randomUUID();
+    const player: Player = {
+      id: playerId,
+      name: message.playerName,
+      avatar: message.avatar,
+      score: 0,
+      hasGuessed: false,
+    };
+
+    storage.addPlayerToRoom(targetRoom.code, player);
+    ws.playerId = playerId;
+    ws.roomCode = targetRoom.code;
+
+    const updatedRoom = storage.getRoom(targetRoom.code)!;
+    sendToClient(ws, { type: "room_joined", room: updatedRoom, playerId });
+    
+    const gameState = storage.getGameState(targetRoom.code);
+    if (gameState) {
+      sendToClient(ws, { type: "game_state_updated", gameState });
+      const messages = storage.getMessages(targetRoom.code);
+      messages.forEach(msg => {
+        sendToClient(ws, { type: "chat_message", message: msg });
+      });
+    }
+    
+    broadcastToRoom(targetRoom.code, { type: "room_updated", room: updatedRoom }, wss, playerId);
+
+    const systemMessage: Message = {
+      id: randomUUID(),
+      playerId: "system",
+      playerName: "System",
+      content: `${message.playerName} joined the game!`,
+      isCorrect: false,
+      isSystem: true,
+      timestamp: Date.now(),
+    };
+    storage.addMessage(targetRoom.code, systemMessage);
+    broadcastToRoom(targetRoom.code, { type: "chat_message", message: systemMessage }, wss);
   }
 
   function handleRejoinRoom(ws: ExtendedWebSocket, message: WsMessage & { type: "rejoin_room" }, wss: WebSocketServer) {

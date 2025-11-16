@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paintbrush, Users } from "lucide-react";
+import { Paintbrush, Users, Shuffle } from "lucide-react";
 import { useWebSocketContext } from "@/contexts/WebSocketContext";
 import { type ServerMessage, type AvatarId, type Room, GameMode } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,17 @@ export default function Home() {
       sendMessage({
         type: "join_room",
         roomCode: roomCode.trim().toUpperCase(),
+        playerName: playerName.trim(),
+        avatar: randomAvatar,
+      });
+    }
+  };
+
+  const handleJoinRandomRoom = () => {
+    if (playerName.trim() && isConnected) {
+      const randomAvatar = `avatar-${Math.floor(Math.random() * 12) + 1}` as AvatarId;
+      sendMessage({
+        type: "join_random_room",
         playerName: playerName.trim(),
         avatar: randomAvatar,
       });
@@ -165,6 +176,31 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-2 border-primary/20 hover-elevate active-elevate-2">
+          <CardContent className="pt-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Shuffle className="h-8 w-8 text-primary" />
+                <div>
+                  <h3 className="font-semibold text-lg">Feeling Lucky?</h3>
+                  <p className="text-sm text-muted-foreground">Join any available room with a random game mode!</p>
+                </div>
+              </div>
+              <Button
+                onClick={handleJoinRandomRoom}
+                disabled={!playerName.trim() || !isConnected}
+                variant="default"
+                size="lg"
+                className="w-full md:w-auto h-12 text-lg font-semibold"
+                data-testid="button-join-random-room"
+              >
+                <Shuffle className="mr-2 h-5 w-5" />
+                Join Random Room
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="bg-card/50 border-dashed">
           <CardContent className="pt-6">
