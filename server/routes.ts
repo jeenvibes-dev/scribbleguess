@@ -62,6 +62,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       case "join_room":
         handleJoinRoom(ws, message, wss);
         break;
+      case "rejoin_room":
+        handleRejoinRoom(ws, message, wss);
+        break;
       case "start_game":
         handleStartGame(ws, message, wss);
         break;
@@ -152,6 +155,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     storage.addMessage(room.code, systemMessage);
     broadcastToRoom(room.code, { type: "chat_message", message: systemMessage }, wss);
+  }
+
+  function handleRejoinRoom(ws: ExtendedWebSocket, message: WsMessage & { type: "rejoin_room" }, wss: WebSocketServer) {
+    const room = storage.getRoom(message.roomCode);
+    if (!room) {
+      sendToClient(ws, { type: "error", message: "Room not found" });
+      return;
+    }
+
+    const player = room.players.find(p => p.id === message.playerId);
+    if (!player) {
+      sendToClient(ws, { type: "error", message: "Player not found in room" });
+      return;
+    }
+
+    ws.playerId = message.playerId;
+    ws.roomCode = message.roomCode;
+
+    sendToClient(ws, { type: "room_updated", room });
+
+    const gameState = storage.getGameState(room.code);
+    if (gameState && room.isStarted) {
+      sendToClient(ws, { type: "game_state_updated", gameState });
+      const messages = storage.getMessages(room.code);
+      messages.forEach(msg => {
+        sendToClient(ws, { type: "chat_message", message: msg });
+      });
+    }
   }
 
   function handleStartGame(ws: ExtendedWebSocket, message: WsMessage & { type: "start_game" }, wss: WebSocketServer) {

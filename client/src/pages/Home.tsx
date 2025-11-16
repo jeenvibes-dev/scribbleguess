@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Paintbrush, Users } from "lucide-react";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebSocketContext } from "@/contexts/WebSocketContext";
 import { type ServerMessage, type AvatarId, type Room, GameMode } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,7 +35,11 @@ export default function Home() {
     }
   }, [setLocation, toast]);
 
-  const { sendMessage, isConnected } = useWebSocket(handleMessage);
+  const { sendMessage, isConnected, setMessageHandler } = useWebSocketContext();
+
+  useEffect(() => {
+    setMessageHandler(handleMessage);
+  }, [handleMessage, setMessageHandler]);
 
   const handleCreateRoom = () => {
     if (playerName.trim() && isConnected) {

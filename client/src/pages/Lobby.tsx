@@ -9,7 +9,7 @@ import { AvatarDisplay } from "@/components/AvatarDisplay";
 import { AVATARS, GameMode, type AvatarId, type Room, type ServerMessage } from "@shared/schema";
 import { Copy, Crown, Gamepad2, Users, Zap, Shuffle, UsersRound, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebSocketContext } from "@/contexts/WebSocketContext";
 
 const GAME_MODE_INFO = {
   [GameMode.CLASSIC]: {
@@ -76,6 +76,13 @@ export default function Lobby() {
       }
     } else if (message.type === "room_updated") {
       setRoom(message.room);
+      if (playerIdFromUrl && !playerId) {
+        setPlayerId(playerIdFromUrl);
+        const player = message.room.players.find(p => p.id === playerIdFromUrl);
+        if (player) {
+          setSelectedAvatar(player.avatar);
+        }
+      }
     } else if (message.type === "game_started") {
       setLocation(`/game?room=${roomCodeFromUrl}&playerId=${playerId}`);
     } else if (message.type === "error") {
@@ -85,9 +92,23 @@ export default function Lobby() {
         variant: "destructive",
       });
     }
-  }, [roomCodeFromUrl, playerId, setLocation, toast]);
+  }, [roomCodeFromUrl, playerId, playerIdFromUrl, setLocation, toast]);
 
-  const { sendMessage, isConnected } = useWebSocket(handleMessage);
+  const { sendMessage, isConnected, setMessageHandler } = useWebSocketContext();
+
+  useEffect(() => {
+    setMessageHandler(handleMessage);
+  }, [handleMessage, setMessageHandler]);
+
+  useEffect(() => {
+    if (isConnected && roomCodeFromUrl && playerIdFromUrl && !room) {
+      sendMessage({
+        type: "rejoin_room",
+        roomCode: roomCodeFromUrl,
+        playerId: playerIdFromUrl,
+      });
+    }
+  }, [isConnected, roomCodeFromUrl, playerIdFromUrl, room, sendMessage]);
 
   const isHost = room?.hostId === playerId;
 

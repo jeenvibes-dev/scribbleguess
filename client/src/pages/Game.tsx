@@ -11,7 +11,7 @@ import { CircularTimer } from "@/components/CircularTimer";
 import { DrawingCanvas, type DrawingCanvasRef } from "@/components/DrawingCanvas";
 import { type Player, type Message, type GameState, type DrawingData, type Room, type ServerMessage } from "@shared/schema";
 import { Send, Trophy, Paintbrush, Home } from "lucide-react";
-import { useWebSocket } from "@/hooks/useWebSocket";
+import { useWebSocketContext } from "@/contexts/WebSocketContext";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -81,7 +81,11 @@ export default function Game() {
     }
   }, [toast]);
 
-  const { sendMessage, isConnected } = useWebSocket(handleMessage);
+  const { sendMessage, isConnected, setMessageHandler } = useWebSocketContext();
+
+  useEffect(() => {
+    setMessageHandler(handleMessage);
+  }, [handleMessage, setMessageHandler]);
 
   const isDrawer = gameState?.drawerIds.includes(playerId || "") || false;
   const currentPlayer = room?.players.find(p => p.id === playerId);

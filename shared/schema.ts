@@ -98,6 +98,11 @@ export const wsMessageSchema = z.discriminatedUnion("type", [
     avatar: z.enum(AVATARS),
   }),
   z.object({
+    type: z.literal("rejoin_room"),
+    roomCode: z.string(),
+    playerId: z.string(),
+  }),
+  z.object({
     type: z.literal("create_room"),
     playerName: z.string(),
     avatar: z.enum(AVATARS),
