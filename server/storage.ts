@@ -91,8 +91,8 @@ export class MemStorage implements IStorage {
   }
 
   getRoomByPlayerId(playerId: string): Room | undefined {
-    for (const room of this.rooms.values()) {
-      if (room.players.some(p => p.id === playerId)) {
+    for (const room of Array.from(this.rooms.values())) {
+      if (room.players.some((p: Player) => p.id === playerId)) {
         return room;
       }
     }
