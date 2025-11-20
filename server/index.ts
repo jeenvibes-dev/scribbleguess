@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
+import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import authRouter from "./auth";
 
 const app = express();
 
@@ -9,6 +12,23 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
+// Session configuration
+const MemoryStoreSession = MemoryStore(session);
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'scribbleguess-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  store: new MemoryStoreSession({
+    checkPeriod: 86400000 // prune expired entries every 24h
+  }),
+  cookie: {
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+  },
+}));
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
@@ -46,6 +66,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Auth routes
+app.use("/api/auth", authRouter);
+
 (async () => {
   const server = await registerRoutes(app);
 
@@ -60,7 +83,8 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  const isProduction = process.env.NODE_ENV === "production";
+  if (!isProduction) {
     await setupVite(app, server);
   } else {
     serveStatic(app);
