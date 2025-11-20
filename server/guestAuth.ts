@@ -83,6 +83,21 @@ export function updateGuestUserAvatar(id: string, avatar: CustomAvatar): boolean
   return false;
 }
 
+export function updateGuestUserUsername(id: string, newUsername: string): boolean {
+  const user = guestUsers.get(id);
+  if (user) {
+    // Remove old username mapping
+    usernameToId.delete(user.username.toLowerCase());
+    // Update username
+    user.username = newUsername;
+    // Add new username mapping
+    usernameToId.set(newUsername.toLowerCase(), id);
+    saveGuestUsers(); // Save to disk
+    return true;
+  }
+  return false;
+}
+
 // Clean up old guest users (older than 30 days instead of 7)
 setInterval(() => {
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;

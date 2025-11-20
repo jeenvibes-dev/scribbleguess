@@ -25,23 +25,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  console.log("AuthProvider rendering, isLoading:", isLoading, "user:", user);
+
   useEffect(() => {
+    console.log("AuthProvider: calling checkAuth");
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
+    console.log("checkAuth: starting");
     try {
       const response = await fetch("/api/auth/me");
+      console.log("checkAuth: response status", response.status);
       if (response.ok) {
         const data = await response.json();
-        setUser(data);
-      } else if (response.status === 503) {
-        // Database not configured - this is okay, app works without it
-        console.log("Auth service unavailable - running without database");
+        console.log("checkAuth: data", data);
+        if (data.user) {
+          setUser(data.user);
+        } else if (data.id) {
+          // Handle old format (direct user object)
+          setUser(data);
+        }
       }
     } catch (error) {
       console.error("Auth check failed:", error);
     } finally {
+      console.log("checkAuth: setting isLoading to false");
       setIsLoading(false);
     }
   };

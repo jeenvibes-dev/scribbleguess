@@ -11,18 +11,23 @@ let users: any = null;
 let eq: any = null;
 
 // Try to import database, but don't fail if DATABASE_URL is not set
-try {
-  if (process.env.DATABASE_URL) {
-    const dbModule = await import("../db/index.js");
-    const schemaModule = await import("../db/schema.js");
-    const drizzleModule = await import("drizzle-orm");
-    db = dbModule.db;
-    users = schemaModule.users;
-    eq = drizzleModule.eq;
+async function initializeDatabase() {
+  try {
+    if (process.env.DATABASE_URL) {
+      const dbModule = await import("../db/index.js");
+      const schemaModule = await import("../db/schema.js");
+      const drizzleModule = await import("drizzle-orm");
+      db = dbModule.db;
+      users = schemaModule.users;
+      eq = drizzleModule.eq;
+    }
+  } catch (error) {
+    console.warn("Database not configured. Auth features will be disabled.");
   }
-} catch (error) {
-  console.warn("Database not configured. Auth features will be disabled.");
 }
+
+// Initialize database on module load
+initializeDatabase();
 
 // Middleware to check if database is available
 const requireDb = (req: Request, res: Response, next: any) => {
@@ -210,7 +215,7 @@ router.get("/me", async (req: Request, res: Response) => {
   const isGuest = (req.session as any).isGuest;
 
   if (!userId) {
-    return res.status(401).json({ message: "Not authenticated" });
+    return res.status(200).json({ user: null });
   }
 
   try {
@@ -311,6 +316,50 @@ router.post("/update-avatar", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid avatar data", errors: error.errors });
     }
     console.error("Update avatar error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update username
+const updateUsernameSchema = z.object({
+  username: z.string().min(3).max(20),
+});
+
+router.post("/update-username", async (req: Request, res: Response) => {
+  const userId = (req.session as any).userId;
+  const isGuest = (req.session as any).isGuest;
+
+  if (!userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+
+  try {
+    const { username } = updateUsernameSchema.parse(req.body);
+
+    // Check if username is already taken
+    const existing = findGuestUserByUsername(username);
+    if (existing && existing.id !== userId) {
+      return res.status(400).json({ message: "Username already taken" });
+    }
+
+    // Update guest user username
+    if (isGuest) {
+      const { updateGuestUserUsername } = await import("./guestAuth.js");
+      const updated = updateGuestUserUsername(userId, username);
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      (req.session as any).username = username;
+      return res.json({ message: "Username updated successfully", username });
+    }
+
+    // Database users not supported yet
+    return res.status(400).json({ message: "Username updates not supported for database users" });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid input", errors: error.errors });
+    }
+    console.error("Update username error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });

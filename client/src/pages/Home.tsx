@@ -4,77 +4,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paintbrush, Users, Shuffle, LogOut, User } from "lucide-react";
+import { Paintbrush, Users, Shuffle, LogOut, User, Settings } from "lucide-react";
 import { useWebSocketContext } from "@/contexts/WebSocketContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { type ServerMessage, type Room, GameMode } from "@shared/schema";
-import { type CustomAvatar, DEFAULT_AVATAR } from "@shared/avatarSchema";
+import { DEFAULT_AVATAR } from "@shared/avatarSchema";
 import { useToast } from "@/hooks/use-toast";
-import { AvatarCustomizer } from "@/components/AvatarCustomizer";
+import { CustomAvatarDisplay } from "@/components/CustomAvatarDisplay";
 import AuthDialog from "@/components/AuthDialog";
 
 const STORAGE_KEYS = {
-  AVATAR: "doodlrush_custom_avatar",
   PLAYER_NAME: "doodlrush_player_name",
 } as const;
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, isLoading: authLoading, signOut, updateAvatar } = useAuth();
+  const { user, isLoading: authLoading, signOut } = useAuth();
   const [playerName, setPlayerName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
-  const [customAvatar, setCustomAvatar] = useState<CustomAvatar>(DEFAULT_AVATAR);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
 
-  // Load user avatar or saved data from localStorage
+  // Load user data
   useEffect(() => {
     if (user) {
-      setCustomAvatar(user.avatar);
       setPlayerName(user.username);
     } else {
-      const savedAvatar = localStorage.getItem(STORAGE_KEYS.AVATAR);
       const savedName = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
-      
-      if (savedAvatar) {
-        try {
-          setCustomAvatar(JSON.parse(savedAvatar));
-        } catch (e) {
-          console.error("Failed to parse saved avatar:", e);
-        }
-      }
-      
       if (savedName) {
         setPlayerName(savedName);
       }
     }
   }, [user]);
-
-  // Save avatar to database (if logged in) or localStorage
-  const handleAvatarChange = async (newAvatar: CustomAvatar) => {
-    setCustomAvatar(newAvatar);
-    
-    if (user) {
-      try {
-        await updateAvatar(newAvatar);
-        toast({
-          title: "Avatar Saved",
-          description: "Your avatar has been saved to your account!",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to save avatar to account",
-          variant: "destructive",
-        });
-        localStorage.setItem(STORAGE_KEYS.AVATAR, JSON.stringify(newAvatar));
-      }
-    } else {
-      localStorage.setItem(STORAGE_KEYS.AVATAR, JSON.stringify(newAvatar));
-    }
-  };
 
   // Save player name to localStorage
   const handleNameChange = (name: string) => {
@@ -98,14 +61,14 @@ export default function Home() {
       setRoom(message.room);
       localStorage.setItem(`room_${message.room.code}`, JSON.stringify(message.room));
       localStorage.setItem(`player_${message.room.code}`, message.playerId);
-      localStorage.setItem(`avatar_${message.room.code}`, JSON.stringify(customAvatar));
+      localStorage.setItem(`avatar_${message.room.code}`, JSON.stringify(user?.avatar || DEFAULT_AVATAR));
       setLocation(`/lobby?room=${message.room.code}&playerId=${message.playerId}`);
     } else if (message.type === "room_joined") {
       setPlayerId(message.playerId);
       setRoom(message.room);
       localStorage.setItem(`room_${message.room.code}`, JSON.stringify(message.room));
       localStorage.setItem(`player_${message.room.code}`, message.playerId);
-      localStorage.setItem(`avatar_${message.room.code}`, JSON.stringify(customAvatar));
+      localStorage.setItem(`avatar_${message.room.code}`, JSON.stringify(user?.avatar || DEFAULT_AVATAR));
       setLocation(`/lobby?room=${message.room.code}&playerId=${message.playerId}`);
     } else if (message.type === "error") {
       toast({
@@ -114,7 +77,7 @@ export default function Home() {
         variant: "destructive",
       });
     }
-  }, [setLocation, toast, customAvatar]);
+  }, [setLocation, toast, user]);
 
   const { sendMessage, isConnected, subscribe } = useWebSocketContext();
 
@@ -159,6 +122,18 @@ export default function Home() {
     }
   };
 
+  // Show loading state while auth is being checked (AFTER all hooks)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold text-primary">DoodlRush</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 flex items-center justify-center p-4">
       {showAuthDialog && !user && <AuthDialog onClose={() => setShowAuthDialog(false)} />}
@@ -198,18 +173,37 @@ export default function Home() {
                 onClick={() => setShowAuthDialog(true)}
                 variant="outline"
                 size="sm"
-                className="border-emerald-600/20 hover:bg-emerald-600/10"
+                className="border-emerald-600/20 hover:bg-emerald-600/10 font-bold"
               >
                 <User className="h-4 w-4 mr-2" />
-                Save Your Avatar
+                Sign In to Play
               </Button>
             )}
           </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* Avatar Customizer */}
-          <AvatarCustomizer avatar={customAvatar} onAvatarChange={handleAvatarChange} />
+          {/* Avatar Preview */}
+          {user && (
+            <Card className="hover-elevate">
+              <CardHeader>
+                <CardTitle className="text-center">Your Avatar</CardTitle>
+                <CardDescription className="text-center">Customize your appearance</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col items-center space-y-4">
+                  <CustomAvatarDisplay avatar={user.avatar} size="lg" />
+                  <Button
+                    onClick={() => setLocation("/customize")}
+                    className="w-full"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Customize Avatar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Game Options */}
           <div className="space-y-6">
