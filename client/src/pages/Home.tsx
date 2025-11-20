@@ -6,8 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Paintbrush, Users, Shuffle } from "lucide-react";
 import { useWebSocketContext } from "@/contexts/WebSocketContext";
-import { type ServerMessage, type AvatarId, type Room, GameMode } from "@shared/schema";
+import { type ServerMessage, type Room, GameMode } from "@shared/schema";
+import { type CustomAvatar, DEFAULT_AVATAR } from "@shared/avatarSchema";
 import { useToast } from "@/hooks/use-toast";
+import { AvatarCustomizer } from "@/components/AvatarCustomizer";
+
+const STORAGE_KEYS = {
+  AVATAR: "scribbleguess_custom_avatar",
+  PLAYER_NAME: "scribbleguess_player_name",
+} as const;
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -16,6 +23,39 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState("");
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+  const [customAvatar, setCustomAvatar] = useState<CustomAvatar>(DEFAULT_AVATAR);
+
+  // Load saved data from localStorage
+  useEffect(() => {
+    const savedAvatar = localStorage.getItem(STORAGE_KEYS.AVATAR);
+    const savedName = localStorage.getItem(STORAGE_KEYS.PLAYER_NAME);
+    
+    if (savedAvatar) {
+      try {
+        setCustomAvatar(JSON.parse(savedAvatar));
+      } catch (e) {
+        console.error("Failed to parse saved avatar:", e);
+      }
+    }
+    
+    if (savedName) {
+      setPlayerName(savedName);
+    }
+  }, []);
+
+  // Save avatar to localStorage whenever it changes
+  const handleAvatarChange = (newAvatar: CustomAvatar) => {
+    setCustomAvatar(newAvatar);
+    localStorage.setItem(STORAGE_KEYS.AVATAR, JSON.stringify(newAvatar));
+  };
+
+  // Save player name to localStorage
+  const handleNameChange = (name: string) => {
+    setPlayerName(name);
+    if (name.trim()) {
+      localStorage.setItem(STORAGE_KEYS.PLAYER_NAME, name);
+    }
+  };
 
   const handleMessage = useCallback((message: ServerMessage) => {
     if (message.type === "room_created") {
@@ -23,12 +63,14 @@ export default function Home() {
       setRoom(message.room);
       localStorage.setItem(`room_${message.room.code}`, JSON.stringify(message.room));
       localStorage.setItem(`player_${message.room.code}`, message.playerId);
+      localStorage.setItem(`avatar_${message.room.code}`, JSON.stringify(customAvatar));
       setLocation(`/lobby?room=${message.room.code}&playerId=${message.playerId}`);
     } else if (message.type === "room_joined") {
       setPlayerId(message.playerId);
       setRoom(message.room);
       localStorage.setItem(`room_${message.room.code}`, JSON.stringify(message.room));
       localStorage.setItem(`player_${message.room.code}`, message.playerId);
+      localStorage.setItem(`avatar_${message.room.code}`, JSON.stringify(customAvatar));
       setLocation(`/lobby?room=${message.room.code}&playerId=${message.playerId}`);
     } else if (message.type === "error") {
       toast({
@@ -37,7 +79,7 @@ export default function Home() {
         variant: "destructive",
       });
     }
-  }, [setLocation, toast]);
+  }, [setLocation, toast, customAvatar]);
 
   const { sendMessage, isConnected, subscribe } = useWebSocketContext();
 
@@ -48,11 +90,12 @@ export default function Home() {
 
   const handleCreateRoom = () => {
     if (playerName.trim() && isConnected) {
-      const randomAvatar = `avatar-${Math.floor(Math.random() * 12) + 1}` as AvatarId;
+      // For now, use a placeholder avatar ID - server will need updating
+      const placeholderAvatar = "avatar-1" as any;
       sendMessage({
         type: "create_room",
         playerName: playerName.trim(),
-        avatar: randomAvatar,
+        avatar: placeholderAvatar,
         gameMode: GameMode.CLASSIC,
       });
     }
@@ -60,34 +103,34 @@ export default function Home() {
 
   const handleJoinRoom = () => {
     if (playerName.trim() && roomCode.trim() && isConnected) {
-      const randomAvatar = `avatar-${Math.floor(Math.random() * 12) + 1}` as AvatarId;
+      const placeholderAvatar = "avatar-1" as any;
       sendMessage({
         type: "join_room",
         roomCode: roomCode.trim().toUpperCase(),
         playerName: playerName.trim(),
-        avatar: randomAvatar,
+        avatar: placeholderAvatar,
       });
     }
   };
 
   const handleJoinRandomRoom = () => {
     if (playerName.trim() && isConnected) {
-      const randomAvatar = `avatar-${Math.floor(Math.random() * 12) + 1}` as AvatarId;
+      const placeholderAvatar = "avatar-1" as any;
       sendMessage({
         type: "join_random_room",
         playerName: playerName.trim(),
-        avatar: randomAvatar,
+        avatar: placeholderAvatar,
       });
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl space-y-8">
+      <div className="w-full max-w-6xl space-y-8">
         <div className="text-center space-y-4 animate-slide-in">
           <div className="flex items-center justify-center gap-3">
-            <Paintbrush className="h-12 w-12 text-primary" />
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <img src="/logo.svg" alt="ScribbleGuess Logo" className="h-16 w-16" />
+            <h1 className="text-5xl md:text-6xl font-bold text-primary">
               ScribbleGuess
             </h1>
           </div>
@@ -99,108 +142,103 @@ export default function Home() {
           )}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="hover-elevate active-elevate-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Paintbrush className="h-5 w-5 text-primary" />
-                Create Room
-              </CardTitle>
-              <CardDescription>Start a new game and invite your friends</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="create-name">Your Name</Label>
-                <Input
-                  id="create-name"
-                  placeholder="Enter your name"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleCreateRoom()}
-                  maxLength={20}
-                  data-testid="input-player-name-create"
-                />
-              </div>
-              <Button
-                onClick={handleCreateRoom}
-                disabled={!playerName.trim() || !isConnected}
-                className="w-full h-12 text-lg font-semibold"
-                data-testid="button-create-room"
-              >
-                Create Game Room
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Avatar Customizer */}
+          <AvatarCustomizer avatar={customAvatar} onAvatarChange={handleAvatarChange} />
 
-          <Card className="hover-elevate active-elevate-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Join Room
-              </CardTitle>
-              <CardDescription>Enter a room code to join a game</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="join-name">Your Name</Label>
-                <Input
-                  id="join-name"
-                  placeholder="Enter your name"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  maxLength={20}
-                  data-testid="input-player-name-join"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="room-code">Room Code</Label>
-                <Input
-                  id="room-code"
-                  placeholder="Enter 6-digit code"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
-                  maxLength={6}
-                  className="font-mono text-lg tracking-wider"
-                  data-testid="input-room-code"
-                />
-              </div>
-              <Button
-                onClick={handleJoinRoom}
-                disabled={!playerName.trim() || !roomCode.trim() || !isConnected}
-                className="w-full h-12 text-lg font-semibold"
-                data-testid="button-join-room"
-              >
-                Join Game
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="bg-gradient-to-r from-primary/10 to-purple-500/10 border-2 border-primary/20 hover-elevate active-elevate-2">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Shuffle className="h-8 w-8 text-primary" />
-                <div>
-                  <h3 className="font-semibold text-lg">Feeling Lucky?</h3>
-                  <p className="text-sm text-muted-foreground">Join any available room with a random game mode!</p>
+          {/* Game Options */}
+          <div className="space-y-6">
+            <Card className="hover-elevate active-elevate-2">
+              <CardHeader>
+                <CardTitle className="text-center">Enter Your Name</CardTitle>
+                <CardDescription className="text-center">Join or create a game room</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="player-name">Your Name</Label>
+                  <Input
+                    id="player-name"
+                    placeholder="Enter your name"
+                    value={playerName}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && playerName.trim()) {
+                        handleCreateRoom();
+                      }
+                    }}
+                    maxLength={20}
+                    data-testid="input-player-name-create"
+                    className="text-center text-lg"
+                  />
                 </div>
-              </div>
-              <Button
-                onClick={handleJoinRandomRoom}
-                disabled={!playerName.trim() || !isConnected}
-                variant="default"
-                size="lg"
-                className="w-full md:w-auto h-12 text-lg font-semibold"
-                data-testid="button-join-random-room"
-              >
-                <Shuffle className="mr-2 h-5 w-5" />
-                Join Random Room
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <Button
+                      onClick={handleCreateRoom}
+                      disabled={!playerName.trim() || !isConnected}
+                      className="w-full h-14 text-lg font-semibold"
+                      data-testid="button-create-room"
+                    >
+                      <Paintbrush className="mr-2 h-5 w-5" />
+                      Create Private Game
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Input
+                        id="room-code"
+                        placeholder="Room Code"
+                        value={roomCode}
+                        onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
+                        maxLength={6}
+                        className="font-mono text-lg tracking-wider text-center"
+                        data-testid="input-room-code"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleJoinRoom}
+                      disabled={!playerName.trim() || !roomCode.trim() || !isConnected}
+                      className="w-full h-14 text-lg font-semibold"
+                      variant="outline"
+                      data-testid="button-join-room"
+                    >
+                      <Users className="mr-2 h-5 w-5" />
+                      Join Private Game
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-2 border-primary/20 hover-elevate active-elevate-2">
+              <CardContent className="pt-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <Shuffle className="h-8 w-8 text-primary" />
+                    <div>
+                      <h3 className="font-semibold text-lg">Feeling Lucky?</h3>
+                      <p className="text-sm text-muted-foreground">Join any available room with a random game mode!</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleJoinRandomRoom}
+                    disabled={!playerName.trim() || !isConnected}
+                    variant="default"
+                    size="lg"
+                    className="w-full md:w-auto h-12 text-lg font-semibold"
+                    data-testid="button-join-random-room"
+                  >
+                    <Shuffle className="mr-2 h-5 w-5" />
+                    Join Random Room
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         <Card className="bg-card/50 border-dashed">
           <CardContent className="pt-6">

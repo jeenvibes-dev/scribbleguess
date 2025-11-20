@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { AvatarDisplay } from "@/components/AvatarDisplay";
-import { AVATARS, GameMode, type AvatarId, type Room, type ServerMessage } from "@shared/schema";
+import { CustomAvatarDisplay } from "@/components/CustomAvatarDisplay";
+import { GameMode, type Room, type ServerMessage } from "@shared/schema";
+import { type CustomAvatar, DEFAULT_AVATAR } from "@shared/avatarSchema";
 import { Copy, Crown, Gamepad2, Users, Zap, Shuffle, UsersRound, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWebSocketContext } from "@/contexts/WebSocketContext";
@@ -23,7 +24,7 @@ const GAME_MODE_INFO = {
     name: "Double Draw",
     description: "Two players draw the same word together",
     icon: Users,
-    color: "text-purple-500",
+    color: "text-teal-500",
     maxPlayers: 12,
   },
   [GameMode.BLITZ]: {
@@ -54,7 +55,7 @@ export default function Lobby() {
   const { toast } = useToast();
   const [room, setRoom] = useState<Room | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [selectedAvatar, setSelectedAvatar] = useState<AvatarId>("avatar-1");
+  const [customAvatar, setCustomAvatar] = useState<CustomAvatar>(DEFAULT_AVATAR);
 
   const params = new URLSearchParams(window.location.search);
   const roomCodeFromUrl = params.get("room");
@@ -67,15 +68,21 @@ export default function Lobby() {
     if (roomCodeFromUrl) {
       const savedRoom = localStorage.getItem(`room_${roomCodeFromUrl}`);
       const savedPlayerId = localStorage.getItem(`player_${roomCodeFromUrl}`);
+      const savedAvatar = localStorage.getItem(`avatar_${roomCodeFromUrl}`);
+      
+      if (savedAvatar) {
+        try {
+          setCustomAvatar(JSON.parse(savedAvatar));
+        } catch (e) {
+          console.error("Failed to parse saved avatar:", e);
+        }
+      }
+      
       if (savedRoom && savedPlayerId) {
         try {
           const parsedRoom = JSON.parse(savedRoom);
           setRoom(parsedRoom);
           setPlayerId(savedPlayerId);
-          const player = parsedRoom.players?.find((p: any) => p.id === savedPlayerId);
-          if (player) {
-            setSelectedAvatar(player.avatar);
-          }
         } catch (e) {
           console.error("Failed to parse saved room:", e);
         }
@@ -87,18 +94,10 @@ export default function Lobby() {
     if (message.type === "room_created" || message.type === "room_joined") {
       setRoom(message.room);
       setPlayerId(message.playerId);
-      const player = message.room.players.find(p => p.id === message.playerId);
-      if (player) {
-        setSelectedAvatar(player.avatar);
-      }
     } else if (message.type === "room_updated") {
       setRoom(message.room);
       if (playerIdFromUrl && !playerId) {
         setPlayerId(playerIdFromUrl);
-        const player = message.room.players.find(p => p.id === playerIdFromUrl);
-        if (player) {
-          setSelectedAvatar(player.avatar);
-        }
       }
     } else if (message.type === "game_started") {
       setLocation(`/game?room=${roomCodeFromUrl}&playerId=${playerId}`);
@@ -136,17 +135,6 @@ export default function Lobby() {
       toast({
         title: "Room code copied!",
         description: "Share it with your friends to join the game.",
-      });
-    }
-  };
-
-  const handleAvatarChange = (avatar: AvatarId) => {
-    setSelectedAvatar(avatar);
-    if (room?.code) {
-      sendMessage({
-        type: "update_avatar",
-        roomCode: room.code,
-        avatar,
       });
     }
   };
@@ -211,33 +199,6 @@ export default function Lobby() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Choose Your Avatar</CardTitle>
-                <CardDescription>Select a fun avatar to represent you in the game</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="w-full">
-                  <div className="flex gap-3 pb-4">
-                    {AVATARS.map((avatar) => (
-                      <button
-                        key={avatar}
-                        onClick={() => handleAvatarChange(avatar)}
-                        className={`flex-shrink-0 rounded-lg p-2 transition-all hover-elevate active-elevate-2 ${
-                          selectedAvatar === avatar
-                            ? "ring-4 ring-primary ring-offset-2 ring-offset-background"
-                            : "ring-2 ring-border"
-                        }`}
-                        data-testid={`button-avatar-${avatar}`}
-                      >
-                        <AvatarDisplay avatar={avatar} size="lg" />
-                      </button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle>Game Mode</CardTitle>
@@ -305,7 +266,7 @@ export default function Lobby() {
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover-elevate"
                         data-testid={`player-${player.id}`}
                       >
-                        <AvatarDisplay avatar={player.avatar} size="md" />
+                        <CustomAvatarDisplay avatar={player.id === playerId ? customAvatar : DEFAULT_AVATAR} size="md" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-semibold truncate">
