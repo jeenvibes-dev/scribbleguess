@@ -201,7 +201,7 @@ export default function Home() {
                 className="border-emerald-600/20 hover:bg-emerald-600/10"
               >
                 <User className="h-4 w-4 mr-2" />
-                Sign In to Save Avatar
+                Save Your Avatar
               </Button>
             )}
           </div>

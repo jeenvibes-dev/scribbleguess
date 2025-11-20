@@ -6,6 +6,7 @@ interface User {
   id: string;
   username: string;
   avatar: CustomAvatar;
+  isGuest?: boolean;
 }
 
 interface AuthContextType {
@@ -13,6 +14,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (username: string, password: string) => Promise<void>;
   signUp: (username: string, password: string) => Promise<void>;
+  guestSignUp: (username: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   updateAvatar: (avatar: CustomAvatar) => Promise<void>;
 }
@@ -76,6 +78,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data);
   };
 
+  const guestSignUp = async (username: string) => {
+    const response = await fetch("/api/auth/guest-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.message || "Guest sign up failed");
+    }
+
+    const data = await response.json();
+    setUser(data);
+    
+    // Return whether this is a returning user
+    return data.returning;
+  };
+
   const signOut = async () => {
     await fetch("/api/auth/signout", { method: "POST" });
     setUser(null);
@@ -98,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, signOut, updateAvatar }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signUp, guestSignUp, signOut, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { customAvatarSchema } from "@shared/avatarSchema";
+import { customAvatarSchema, DEFAULT_AVATAR } from "@shared/avatarSchema";
+import { createGuestUser, getGuestUser, updateGuestUserAvatar, findGuestUserByUsername } from "./guestAuth";
 
 const router = Router();
 
@@ -30,6 +31,57 @@ const requireDb = (req: Request, res: Response, next: any) => {
   }
   next();
 };
+
+// Guest account sign up/sign in (no database needed)
+const guestSignupSchema = z.object({
+  username: z.string().min(3).max(20),
+});
+
+router.post("/guest-signup", async (req: Request, res: Response) => {
+  try {
+    const { username } = guestSignupSchema.parse(req.body);
+
+    // Check if user already exists
+    let guestUser = findGuestUserByUsername(username);
+    
+    if (guestUser) {
+      // User exists - sign them in with their saved avatar
+      (req.session as any).userId = guestUser.id;
+      (req.session as any).username = guestUser.username;
+      (req.session as any).isGuest = true;
+
+      return res.json({
+        id: guestUser.id,
+        username: guestUser.username,
+        avatar: guestUser.avatar,
+        isGuest: true,
+        returning: true,
+      });
+    }
+
+    // Create new guest user with default avatar
+    guestUser = createGuestUser(username, DEFAULT_AVATAR);
+
+    // Set session
+    (req.session as any).userId = guestUser.id;
+    (req.session as any).username = guestUser.username;
+    (req.session as any).isGuest = true;
+
+    res.json({
+      id: guestUser.id,
+      username: guestUser.username,
+      avatar: guestUser.avatar,
+      isGuest: true,
+      returning: false,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid input", errors: error.errors });
+    }
+    console.error("Guest signup error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // Password hashing (simple for now - in production use bcrypt)
 function hashPassword(password: string): string {
@@ -152,15 +204,35 @@ router.post("/signout", (req: Request, res: Response) => {
   });
 });
 
-// Get current user
-router.get("/me", requireDb, async (req: Request, res: Response) => {
+// Get current user (works for both guest and database users)
+router.get("/me", async (req: Request, res: Response) => {
   const userId = (req.session as any).userId;
+  const isGuest = (req.session as any).isGuest;
 
   if (!userId) {
     return res.status(401).json({ message: "Not authenticated" });
   }
 
   try {
+    // Check if it's a guest user
+    if (isGuest) {
+      const guestUser = getGuestUser(userId);
+      if (!guestUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      return res.json({
+        id: guestUser.id,
+        username: guestUser.username,
+        avatar: guestUser.avatar,
+        isGuest: true,
+      });
+    }
+
+    // Database user
+    if (!db || !users) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
     });
@@ -182,6 +254,7 @@ router.get("/me", requireDb, async (req: Request, res: Response) => {
         pantsColor: user.avatarPantsColor,
         skinTone: user.avatarSkinTone,
       },
+      isGuest: false,
     });
   } catch (error) {
     console.error("Get user error:", error);
@@ -189,13 +262,14 @@ router.get("/me", requireDb, async (req: Request, res: Response) => {
   }
 });
 
-// Update avatar
+// Update avatar (works for both guest and database users)
 const updateAvatarSchema = z.object({
   avatar: customAvatarSchema,
 });
 
-router.post("/update-avatar", requireDb, async (req: Request, res: Response) => {
+router.post("/update-avatar", async (req: Request, res: Response) => {
   const userId = (req.session as any).userId;
+  const isGuest = (req.session as any).isGuest;
 
   if (!userId) {
     return res.status(401).json({ message: "Not authenticated" });
@@ -203,6 +277,20 @@ router.post("/update-avatar", requireDb, async (req: Request, res: Response) => 
 
   try {
     const { avatar } = updateAvatarSchema.parse(req.body);
+
+    // Update guest user avatar
+    if (isGuest) {
+      const updated = updateGuestUserAvatar(userId, avatar);
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      return res.json({ message: "Avatar updated successfully", avatar });
+    }
+
+    // Update database user avatar
+    if (!db || !users) {
+      return res.status(503).json({ message: "Database not available" });
+    }
 
     await db.update(users)
       .set({
