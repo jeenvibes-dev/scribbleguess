@@ -35,6 +35,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   mirrorMode = false,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastPositionRef = useRef<{ x: number; y: number } | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState("#000000");
   const [size, setSize] = useState(5);
@@ -117,6 +118,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
     if (!coords) return;
 
     setIsDrawing(true);
+    lastPositionRef.current = coords;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
@@ -133,14 +135,14 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   const continueDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !isDrawer) return;
     const coords = getCoordinates(e);
-    if (!coords) return;
+    if (!coords || !lastPositionRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
 
-    const prevX = coords.x;
-    const prevY = coords.y;
+    const prevX = lastPositionRef.current.x;
+    const prevY = lastPositionRef.current.y;
 
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
@@ -160,6 +162,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
       toX: coords.x,
       toY: coords.y,
     });
+
+    lastPositionRef.current = coords;
   };
 
   const stopDrawing = () => {
@@ -197,6 +201,28 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         onMouseMove={continueDrawing}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+          });
+          startDrawing(mouseEvent as any);
+        }}
+        onTouchMove={(e) => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+          });
+          continueDrawing(mouseEvent as any);
+        }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          stopDrawing();
+        }}
         className={`w-full h-auto bg-white rounded-lg shadow-canvas border-2 border-border ${
           isDrawer ? "cursor-crosshair" : "cursor-not-allowed"
         }`}

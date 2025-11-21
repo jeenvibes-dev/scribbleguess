@@ -294,25 +294,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const updatedRoom = storage.getRoom(room.code)!;
     broadcastToRoom(room.code, { type: "room_updated", room: updatedRoom }, wss);
-    broadcastToRoom(room.code, { type: "game_started", gameState }, wss);
+    
+    // Broadcast game state immediately so clients can load UI
+    broadcastToRoom(room.code, { type: "game_state_updated", gameState }, wss);
+    
+    // Wait 1 second before officially starting to ensure UI is loaded
+    setTimeout(() => {
+      broadcastToRoom(room.code, { type: "game_started", gameState }, wss);
 
-    const systemMessage: Message = {
-      id: randomUUID(),
-      playerId: "system",
-      playerName: "System",
-      content: `Round ${gameState.currentRound} started!`,
-      isCorrect: false,
-      isSystem: true,
-      timestamp: Date.now(),
-    };
-    storage.addMessage(room.code, systemMessage);
-    broadcastToRoom(room.code, { type: "chat_message", message: systemMessage }, wss);
+      const systemMessage: Message = {
+        id: randomUUID(),
+        playerId: "system",
+        playerName: "System",
+        content: `Round ${gameState.currentRound} started!`,
+        isCorrect: false,
+        isSystem: true,
+        timestamp: Date.now(),
+      };
+      storage.addMessage(room.code, systemMessage);
+      broadcastToRoom(room.code, { type: "chat_message", message: systemMessage }, wss);
 
-    startRoundTimer(room.code, wss);
+      startRoundTimer(room.code, wss);
 
-    if (room.gameMode === GameMode.RANDOMIZED) {
-      startRandomizedTimer(room.code, wss);
-    }
+      if (room.gameMode === GameMode.RANDOMIZED) {
+        startRandomizedTimer(room.code, wss);
+      }
+    }, 1000);
   }
 
   function handleDraw(ws: ExtendedWebSocket, message: WsMessage & { type: "draw" }, wss: WebSocketServer) {
@@ -576,7 +583,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     storage.setGameState(roomCode, gameState);
 
     const updatedRoom = storage.getRoom(roomCode)!;
+    
+    // Broadcast updated state immediately so clients can preload
     broadcastToRoom(roomCode, { type: "room_updated", room: updatedRoom }, wss);
+    broadcastToRoom(roomCode, { type: "game_state_updated", gameState }, wss);
 
     broadcastToRoom(roomCode, { type: "drawing_update", drawingData: { type: "clear" } }, wss);
 

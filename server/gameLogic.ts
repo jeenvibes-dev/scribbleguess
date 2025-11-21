@@ -32,7 +32,7 @@ export function createWordDisplay(word: string, isDrawer: boolean): string {
 
 export function initializeGameState(room: Room): GameState {
   const word = getRandomWord();
-  const totalRounds = room.gameMode === GameMode.BLITZ ? 5 : 3;
+  const totalRounds = room.gameMode === GameMode.BLITZ ? 10 : 10;
   const roundDuration = room.gameMode === GameMode.BLITZ ? 15 : 60;
   
   let drawerIds: string[];
