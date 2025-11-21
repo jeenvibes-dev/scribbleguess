@@ -17,6 +17,7 @@ export default function CustomizeAvatar() {
   const [customAvatar, setCustomAvatar] = useState<CustomAvatar>(DEFAULT_AVATAR);
   const [username, setUsername] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -27,6 +28,29 @@ export default function CustomizeAvatar() {
       setLocation("/");
     }
   }, [user, setLocation]);
+
+  // Track changes to avatar or username
+  useEffect(() => {
+    if (!user) return;
+    
+    const avatarChanged = JSON.stringify(customAvatar) !== JSON.stringify(user.avatar);
+    const usernameChanged = username !== user.username;
+    
+    setHasUnsavedChanges(avatarChanged || usernameChanged);
+  }, [customAvatar, username, user]);
+
+  // Warn before leaving if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const handleRandomize = () => {
     const randomGender = GENDERS[Math.floor(Math.random() * GENDERS.length)];
@@ -84,6 +108,7 @@ export default function CustomizeAvatar() {
       }
 
       await updateAvatar(customAvatar);
+      setHasUnsavedChanges(false);
       toast({
         title: "Changes saved!",
         description: "Your profile has been updated successfully.",
@@ -100,6 +125,16 @@ export default function CustomizeAvatar() {
     }
   };
 
+  const handleCancel = () => {
+    if (hasUnsavedChanges) {
+      if (window.confirm("You have unsaved changes. Are you sure you want to leave?")) {
+        setLocation("/");
+      }
+    } else {
+      setLocation("/");
+    }
+  };
+
   if (!user) {
     return null;
   }
@@ -112,7 +147,7 @@ export default function CustomizeAvatar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation("/")}
+            onClick={handleCancel}
             className="hover:bg-primary/10"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -187,7 +222,7 @@ export default function CustomizeAvatar() {
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
           <Button
-            onClick={() => setLocation("/")}
+            onClick={handleCancel}
             variant="outline"
             className="h-12 px-8"
           >

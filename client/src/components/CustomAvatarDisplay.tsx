@@ -194,22 +194,26 @@ export function CustomAvatarDisplay({
           {/* Clothing based on gender */}
           {avatar.gender === "female" ? (
             <>
-              {/* Dress */}
+              {/* Top/Shirt */}
+              <rect x="20" y="50" width="30" height="20" fill={shirtColor} rx="4"/>
+              {/* Skirt */}
               <path 
-                d="M 20,50 L 25,70 L 20,95 L 50,95 L 45,70 L 50,50 Z" 
-                fill={shirtColor} 
+                d="M 20,70 L 18,85 L 52,85 L 50,70 Z" 
+                fill={pantsColor} 
                 stroke="#000" 
                 strokeWidth="1.5"
               />
-              {/* Dress belt/waist */}
-              <rect x="20" y="68" width="30" height="4" fill="#000" opacity="0.2"/>
+              {/* Legs */}
+              <rect x="24" y="85" width="8" height="15" fill={skinTone}/>
+              <rect x="38" y="85" width="8" height="15" fill={skinTone}/>
             </>
           ) : (
             <>
-              {/* Pants */}
-              <rect x="25" y="70" width="20" height="30" fill={pantsColor} rx="3"/>
               {/* Shirt */}
               <rect x="20" y="50" width="30" height="25" fill={shirtColor} rx="4"/>
+              {/* Pants */}
+              <rect x="24" y="75" width="8" height="25" fill={pantsColor} rx="2"/>
+              <rect x="38" y="75" width="8" height="25" fill={pantsColor} rx="2"/>
             </>
           )}
           

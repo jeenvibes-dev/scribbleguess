@@ -92,6 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       id: playerId,
       name: message.playerName,
       avatar: message.avatar,
+      customAvatar: message.customAvatar,
       score: 0,
       hasGuessed: false,
     };
@@ -128,6 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       id: playerId,
       name: message.playerName,
       avatar: message.avatar,
+      customAvatar: message.customAvatar,
       score: 0,
       hasGuessed: false,
     };
@@ -189,6 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: playerId,
         name: message.playerName,
         avatar: message.avatar,
+        customAvatar: message.customAvatar,
         score: 0,
         hasGuessed: false,
       };
@@ -209,6 +212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       id: playerId,
       name: message.playerName,
       avatar: message.avatar,
+      customAvatar: message.customAvatar,
       score: 0,
       hasGuessed: false,
     };
@@ -376,6 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const player = room.players.find(p => p.id === ws.playerId);
     if (player) {
       player.avatar = message.avatar;
+      player.customAvatar = message.customAvatar;
       storage.updateRoom(room.code, { players: room.players });
       broadcastToRoom(room.code, { type: "room_updated", room: storage.getRoom(room.code)! }, wss);
     }

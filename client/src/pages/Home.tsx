@@ -94,6 +94,7 @@ export default function Home() {
         type: "create_room",
         playerName: playerName.trim(),
         avatar: placeholderAvatar,
+        customAvatar: user?.avatar,
         gameMode: GameMode.CLASSIC,
       });
     }
@@ -107,6 +108,7 @@ export default function Home() {
         roomCode: roomCode.trim().toUpperCase(),
         playerName: playerName.trim(),
         avatar: placeholderAvatar,
+        customAvatar: user?.avatar,
       });
     }
   };
@@ -118,6 +120,7 @@ export default function Home() {
         type: "join_random_room",
         playerName: playerName.trim(),
         avatar: placeholderAvatar,
+        customAvatar: user?.avatar,
       });
     }
   };

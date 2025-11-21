@@ -55,7 +55,6 @@ export default function Lobby() {
   const { toast } = useToast();
   const [room, setRoom] = useState<Room | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [customAvatar, setCustomAvatar] = useState<CustomAvatar>(DEFAULT_AVATAR);
 
   const params = new URLSearchParams(window.location.search);
   const roomCodeFromUrl = params.get("room");
@@ -68,15 +67,6 @@ export default function Lobby() {
     if (roomCodeFromUrl) {
       const savedRoom = localStorage.getItem(`room_${roomCodeFromUrl}`);
       const savedPlayerId = localStorage.getItem(`player_${roomCodeFromUrl}`);
-      const savedAvatar = localStorage.getItem(`avatar_${roomCodeFromUrl}`);
-      
-      if (savedAvatar) {
-        try {
-          setCustomAvatar(JSON.parse(savedAvatar));
-        } catch (e) {
-          console.error("Failed to parse saved avatar:", e);
-        }
-      }
       
       if (savedRoom && savedPlayerId) {
         try {
@@ -266,7 +256,7 @@ export default function Lobby() {
                         className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover-elevate"
                         data-testid={`player-${player.id}`}
                       >
-                        <CustomAvatarDisplay avatar={player.id === playerId ? customAvatar : DEFAULT_AVATAR} size="md" />
+                        <CustomAvatarDisplay avatar={player.customAvatar || DEFAULT_AVATAR} size="md" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-semibold truncate">

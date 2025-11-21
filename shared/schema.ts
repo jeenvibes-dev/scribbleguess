@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { customAvatarSchema } from "./avatarSchema";
 
 // Game Modes
 export const GameMode = {
@@ -25,6 +26,7 @@ export const playerSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(20),
   avatar: z.enum(AVATARS),
+  customAvatar: customAvatarSchema.optional(),
   score: z.number().default(0),
   hasGuessed: z.boolean().default(false),
 });
@@ -96,11 +98,13 @@ export const wsMessageSchema = z.discriminatedUnion("type", [
     roomCode: z.string(),
     playerName: z.string(),
     avatar: z.enum(AVATARS),
+    customAvatar: customAvatarSchema.optional(),
   }),
   z.object({
     type: z.literal("join_random_room"),
     playerName: z.string(),
     avatar: z.enum(AVATARS),
+    customAvatar: customAvatarSchema.optional(),
   }),
   z.object({
     type: z.literal("rejoin_room"),
@@ -111,6 +115,7 @@ export const wsMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("create_room"),
     playerName: z.string(),
     avatar: z.enum(AVATARS),
+    customAvatar: customAvatarSchema.optional(),
     gameMode: z.enum([GameMode.CLASSIC, GameMode.DOUBLE_DRAW, GameMode.BLITZ, GameMode.RANDOMIZED, GameMode.MEGA]),
   }),
   z.object({
@@ -131,6 +136,7 @@ export const wsMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("update_avatar"),
     roomCode: z.string(),
     avatar: z.enum(AVATARS),
+    customAvatar: customAvatarSchema.optional(),
   }),
   z.object({
     type: z.literal("update_mode"),
