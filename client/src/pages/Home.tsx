@@ -128,9 +128,17 @@ export default function Home() {
   // Show loading state while auth is being checked (AFTER all hooks)
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F5EFE1] flex items-center justify-center">
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-primary">DoodlRush</h1>
+          <img 
+            src="https://cdn.leonardo.ai/users/1c864942-3f25-4c2c-959b-c2987c1629f1/generations/519b6a03-a2e9-431c-b7ff-9a4fbc7c15ff/segments/4:4:1/Lucid_Origin_A_vibrant_green_logo_featuring_the_word_DoodlRush_3.jpg" 
+            alt="DoodlRush" 
+            className="h-56 w-auto mx-auto"
+            style={{
+              clipPath: 'inset(20% 0 20% 0)',
+              objectFit: 'cover'
+            }}
+          />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -138,18 +146,23 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F5EFE1] flex items-center justify-center p-4">
       {showAuthDialog && !user && <AuthDialog onClose={() => setShowAuthDialog(false)} />}
       
-      <div className="w-full max-w-6xl space-y-8">
-        <div className="text-center space-y-4 animate-slide-in">
-          <div className="flex items-center justify-center gap-3">
-            <img src="/logo.svg" alt="DoodlRush Logo" className="h-16 w-16" />
-            <h1 className="text-5xl md:text-6xl font-bold text-primary">
-              DoodlRush
-            </h1>
+      <div className="w-full max-w-6xl space-y-2">
+        <div className="text-center space-y-0 animate-slide-in">
+          <div className="flex items-center justify-center -mt-8">
+            <img 
+              src="https://cdn.leonardo.ai/users/1c864942-3f25-4c2c-959b-c2987c1629f1/generations/519b6a03-a2e9-431c-b7ff-9a4fbc7c15ff/segments/4:4:1/Lucid_Origin_A_vibrant_green_logo_featuring_the_word_DoodlRush_3.jpg" 
+              alt="DoodlRush" 
+              className="h-56 md:h-72 w-auto"
+              style={{
+                clipPath: 'inset(20% 0 20% 0)',
+                objectFit: 'cover'
+              }}
+            />
           </div>
-          <p className="text-xl text-muted-foreground font-medium">
+          <p className="text-xl text-muted-foreground font-medium -mt-4">
             Draw, Guess, and Have Fun with Friends!
           </p>
           {!isConnected && (
