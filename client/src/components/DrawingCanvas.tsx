@@ -11,6 +11,7 @@ interface DrawingCanvasProps {
   currentColor?: string;
   currentSize?: number;
   mirrorMode?: boolean;
+  hideControls?: boolean;
 }
 
 export interface DrawingCanvasRef {
@@ -33,6 +34,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
   currentColor: forcedColor,
   currentSize: forcedSize,
   mirrorMode = false,
+  hideControls = false,
 }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPositionRef = useRef<{ x: number; y: number } | null>(null);
@@ -203,6 +205,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         onMouseLeave={stopDrawing}
         onTouchStart={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           const touch = e.touches[0];
           const mouseEvent = new MouseEvent('mousedown', {
             clientX: touch.clientX,
@@ -212,6 +215,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         }}
         onTouchMove={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           const touch = e.touches[0];
           const mouseEvent = new MouseEvent('mousemove', {
             clientX: touch.clientX,
@@ -221,15 +225,17 @@ export const DrawingCanvas = forwardRef<DrawingCanvasRef, DrawingCanvasProps>(({
         }}
         onTouchEnd={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           stopDrawing();
         }}
+        style={{ touchAction: 'none' }}
         className={`w-full h-auto bg-white rounded-lg shadow-canvas border-2 border-border ${
           isDrawer ? "cursor-crosshair" : "cursor-not-allowed"
         }`}
         data-testid="drawing-canvas"
       />
 
-      {isDrawer && (
+      {isDrawer && !hideControls && (
         <div className="mt-4 space-y-4">
           <div className="flex items-center gap-2 flex-wrap" data-testid="color-picker">
             {COLORS.map((c) => (

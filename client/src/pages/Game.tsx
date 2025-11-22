@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { AvatarDisplay } from "@/components/AvatarDisplay";
+import { CustomAvatarDisplay } from "@/components/CustomAvatarDisplay";
 import { CircularTimer } from "@/components/CircularTimer";
 import { DrawingCanvas, type DrawingCanvasRef } from "@/components/DrawingCanvas";
-import { type Player, type Message, type GameState, type DrawingData, type Room, type ServerMessage } from "@shared/schema";
+import { type Player, type Message, type GameState, type DrawingData, type Room, type ServerMessage, GameMode } from "@shared/schema";
+import { DEFAULT_AVATAR } from "@shared/avatarSchema";
 import { Send, Trophy, Paintbrush, Home } from "lucide-react";
 import { useWebSocketContext } from "@/contexts/WebSocketContext";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +88,17 @@ export default function Game() {
     const unsubscribe = subscribe(handleMessage);
     return unsubscribe;
   }, [handleMessage, subscribe]);
+
+  // Rejoin room when component loads to get room data
+  useEffect(() => {
+    if (isConnected && roomCodeFromUrl && playerIdFromUrl && !room) {
+      sendMessage({
+        type: "rejoin_room",
+        roomCode: roomCodeFromUrl,
+        playerId: playerIdFromUrl,
+      });
+    }
+  }, [isConnected, roomCodeFromUrl, playerIdFromUrl, room, sendMessage]);
 
   const isDrawer = gameState?.drawerIds.includes(playerId || "") || false;
   const currentPlayer = room?.players.find(p => p.id === playerId);
@@ -188,6 +200,7 @@ export default function Game() {
                   currentColor={gameState.currentBrushModifier?.color}
                   currentSize={gameState.currentBrushModifier?.size}
                   mirrorMode={gameState.currentBrushModifier?.mirror}
+                  hideControls={room.gameMode === GameMode.RANDOMIZED}
                 />
               </CardContent>
             </Card>
@@ -233,7 +246,7 @@ export default function Game() {
                           {index === 2 && "🥉"}
                           {index > 2 && `${index + 1}.`}
                         </div>
-                        <AvatarDisplay avatar={player.avatar} size="sm" />
+                        <CustomAvatarDisplay avatar={player.customAvatar || DEFAULT_AVATAR} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm truncate flex items-center gap-1">
                             {player.id === playerId ? "You" : player.name}

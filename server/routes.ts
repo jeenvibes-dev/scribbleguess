@@ -297,11 +297,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Broadcast game state immediately so clients can load UI
     broadcastToRoom(room.code, { type: "game_state_updated", gameState }, wss);
+    broadcastToRoom(room.code, { type: "game_started", gameState }, wss);
     
-    // Wait 1 second before officially starting to ensure UI is loaded
+    // Wait 3 seconds before starting the timer to ensure all clients are fully loaded
     setTimeout(() => {
-      broadcastToRoom(room.code, { type: "game_started", gameState }, wss);
-
       const systemMessage: Message = {
         id: randomUUID(),
         playerId: "system",
@@ -319,7 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (room.gameMode === GameMode.RANDOMIZED) {
         startRandomizedTimer(room.code, wss);
       }
-    }, 1000);
+    }, 3000);
   }
 
   function handleDraw(ws: ExtendedWebSocket, message: WsMessage & { type: "draw" }, wss: WebSocketServer) {
