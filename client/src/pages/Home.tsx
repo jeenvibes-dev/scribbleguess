@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Paintbrush, Users, Shuffle, LogOut, User, Settings } from "lucide-react";
+import { Paintbrush, Users, LogOut, User, Settings } from "lucide-react";
 import { useWebSocketContext } from "@/contexts/WebSocketContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { type ServerMessage, type Room, GameMode } from "@shared/schema";
@@ -106,18 +106,6 @@ export default function Home() {
       sendMessage({
         type: "join_room",
         roomCode: roomCode.trim().toUpperCase(),
-        playerName: playerName.trim(),
-        avatar: placeholderAvatar,
-        customAvatar: user?.avatar,
-      });
-    }
-  };
-
-  const handleJoinRandomRoom = () => {
-    if (playerName.trim() && isConnected) {
-      const placeholderAvatar = "avatar-1" as any;
-      sendMessage({
-        type: "join_random_room",
         playerName: playerName.trim(),
         avatar: placeholderAvatar,
         customAvatar: user?.avatar,
@@ -290,31 +278,6 @@ export default function Home() {
                       Join Private Game
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-2 border-primary/20 hover-elevate active-elevate-2">
-              <CardContent className="pt-6">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <Shuffle className="h-8 w-8 text-primary" />
-                    <div>
-                      <h3 className="font-semibold text-lg">Feeling Lucky?</h3>
-                      <p className="text-sm text-muted-foreground">Join any available room with a random game mode!</p>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleJoinRandomRoom}
-                    disabled={!playerName.trim() || !isConnected}
-                    variant="default"
-                    size="lg"
-                    className="w-full md:w-auto h-12 text-lg font-semibold"
-                    data-testid="button-join-random-room"
-                  >
-                    <Shuffle className="mr-2 h-5 w-5" />
-                    Join Random Room
-                  </Button>
                 </div>
               </CardContent>
             </Card>
